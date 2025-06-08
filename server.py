@@ -3,18 +3,21 @@ import threading
 import random
 import json
 import time
+import os
 
 class GameServer:
-    def __init__(self, host='0.0.0.0', port=5555):
+    def __init__(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((host, port))
+        self.host = os.getenv('HOST', '0.0.0.0')  # Render compatible
+        self.port = int(os.getenv('PORT', '5555'))
+        self.server.bind((self.host, self.port))
         self.server.listen()
         
-        self.rooms = {}  # {room_id: {'password': pass, 'players': {client: player_info}}}
-        self.clients = {}  # {client: {'room': room_id, 'name': name, 'shape': shape}}
+        self.rooms = {}
+        self.clients = {}
         
-        print(f"Server started on {host}:{port}")
-        
+        print(f"Server started on {self.host}:{self.port}")
+    
     def broadcast(self, room_id, message, exclude_client=None):
         if room_id in self.rooms:
             for client in self.rooms[room_id]['players']:
@@ -28,17 +31,13 @@ class GameServer:
         if client in self.clients:
             room_id = self.clients[client]['room']
             if room_id in self.rooms and client in self.rooms[room_id]['players']:
-                player_name = self.clients[client]['name']
                 self.rooms[room_id]['players'].pop(client)
-                
                 self.broadcast(room_id, json.dumps({
                     'type': 'player_left',
-                    'name': player_name
+                    'name': self.clients[client]['name']
                 }))
-                
                 if len(self.rooms[room_id]['players']) == 0:
                     self.rooms.pop(room_id)
-                    
             self.clients.pop(client)
         client.close()
     
@@ -66,7 +65,12 @@ class GameServer:
                     'players': {}
                 }
             
-            self.clients[client] = {'room': room_id, 'name': player_name, 'shape': shape}
+            self.clients[client] = {
+                'room': room_id,
+                'name': player_name,
+                'shape': shape
+            }
+            
             self.rooms[room_id]['players'][client] = {
                 'name': player_name,
                 'shape': shape,
@@ -150,7 +154,6 @@ class GameServer:
                         for c, info in self.rooms[room_id]['players'].items():
                             if info['name'] == data['target']:
                                 hit_player = info
-                                hit_client = c
                                 break
                         
                         if hit_player:
