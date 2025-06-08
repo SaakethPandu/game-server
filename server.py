@@ -9,7 +9,7 @@ class GameServer:
     def __init__(self):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = os.getenv('HOST', '0.0.0.0')  # Render compatible
-        self.port = int(os.getenv('PORT', '5555'))
+        self.port = int(os.getenv('PORT', '10000'))
         self.server.bind((self.host, self.port))
         self.server.listen()
         
